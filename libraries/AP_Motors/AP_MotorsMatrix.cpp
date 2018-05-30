@@ -99,7 +99,11 @@ void AP_MotorsMatrix::output_to_motors()
                     if (_disarm_disable_pwm && _disarm_safety_timer == 0 && !armed()) {
                         motor_out[i] = 0;
                     } else {
-                        motor_out[i] = get_pwm_output_min();
+						if(i==6||i==7){
+							motor_out[i] = 1500;
+						}else{
+							motor_out[i] = get_pwm_output_min();
+						}
                     }
                 }
             }
@@ -109,7 +113,15 @@ void AP_MotorsMatrix::output_to_motors()
             // sends output to motors when armed but not flying
             for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
                 if (motor_enabled[i]) {
-                    motor_out[i] = calc_spin_up_to_pwm();
+                    if (i==6){
+						motor_out[i] = 1500;	
+					}
+					else if(i==7){
+						motor_out[i] = 1500;
+					}
+					else{
+						motor_out[i] = calc_spin_up_to_pwm();
+					}
                 }
             }
             break;
@@ -119,7 +131,15 @@ void AP_MotorsMatrix::output_to_motors()
             // set motor output based on thrust requests
             for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
                 if (motor_enabled[i]) {
-                    motor_out[i] = calc_thrust_to_pwm(_thrust_rpyt_out[i]);
+                    if (i==6){
+						motor_out[i] = _yaw_servo_output1;
+					}
+					else if(i==7){
+						motor_out[i] = _yaw_servo_output2;
+					}
+					else{
+						motor_out[i] = calc_thrust_to_pwm(_thrust_rpyt_out[i]);
+					}
                 }
             }
             break;
@@ -169,6 +189,9 @@ void AP_MotorsMatrix::output_armed_stabilizing()
     pitch_thrust = _pitch_in * get_compensation_gain();
     yaw_thrust = _yaw_in * get_compensation_gain();
     throttle_thrust = get_throttle() * get_compensation_gain();
+	
+	_yaw_servo_output1 = -1*600*yaw_thrust+1500;
+	_yaw_servo_output2 = -1*600*yaw_thrust+1500;
 
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
@@ -455,12 +478,12 @@ void AP_MotorsMatrix::setup_motors(motor_frame_class frame_class, motor_frame_ty
         case MOTOR_FRAME_HEXA:
             switch (frame_type) {
                 case MOTOR_FRAME_TYPE_PLUS:
-                    add_motor(AP_MOTORS_MOT_1,   0, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  1);
-                    add_motor(AP_MOTORS_MOT_2, 180, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 4);
-                    add_motor(AP_MOTORS_MOT_3,-120, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  5);
-                    add_motor(AP_MOTORS_MOT_4,  60, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 2);
-                    add_motor(AP_MOTORS_MOT_5, -60, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 6);
-                    add_motor(AP_MOTORS_MOT_6, 120, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  3);
+                    add_motor_raw(AP_MOTORS_MOT_1, 0.81f,  1.0f,0.0f, 1);
+					add_motor_raw(AP_MOTORS_MOT_2,-0.81f,  1.0f,0.0f, 2);
+					add_motor_raw(AP_MOTORS_MOT_3,  1.0f, -1.0f,0.0f, 3);//increased pitch to .8 to compesate for forward flight
+					add_motor_raw(AP_MOTORS_MOT_4,  1.0f, -1.0f,0.0f, 4);
+					add_motor_raw(AP_MOTORS_MOT_5,  0.0f,  0.0f,0.0f, 5);
+					add_motor_raw(AP_MOTORS_MOT_6,  0.0f,  0.0f,0.0f, 6);
                     success = true;
                     break;
                 case MOTOR_FRAME_TYPE_X:
@@ -480,26 +503,26 @@ void AP_MotorsMatrix::setup_motors(motor_frame_class frame_class, motor_frame_ty
 
         case MOTOR_FRAME_OCTA:
             switch (frame_type) {
-                case MOTOR_FRAME_TYPE_PLUS:
-                    add_motor(AP_MOTORS_MOT_1,    0,  AP_MOTORS_MATRIX_YAW_FACTOR_CW,  1);
-                    add_motor(AP_MOTORS_MOT_2,  180,  AP_MOTORS_MATRIX_YAW_FACTOR_CW,  5);
-                    add_motor(AP_MOTORS_MOT_3,   45,  AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 2);
-                    add_motor(AP_MOTORS_MOT_4,  135,  AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 4);
-                    add_motor(AP_MOTORS_MOT_5,  -45,  AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 8);
-                    add_motor(AP_MOTORS_MOT_6, -135,  AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 6);
-                    add_motor(AP_MOTORS_MOT_7,  -90,  AP_MOTORS_MATRIX_YAW_FACTOR_CW,  7);
-                    add_motor(AP_MOTORS_MOT_8,   90,  AP_MOTORS_MATRIX_YAW_FACTOR_CW,  3);
+                case MOTOR_FRAME_TYPE_PLUS:         //H4 mix 
+                    add_motor_raw(AP_MOTORS_MOT_1, 0.45f,  1.0f,0.0f, 1);
+					add_motor_raw(AP_MOTORS_MOT_2,-0.45f,  1.0f,0.0f, 2);
+					add_motor_raw(AP_MOTORS_MOT_3,  1.0f, -0.34f,0.0f, 3);
+					add_motor_raw(AP_MOTORS_MOT_4, 0.37f, -0.80f,0.0f, 4);//increased pitch to .8 to compesate for forward flight
+					add_motor_raw(AP_MOTORS_MOT_5,-0.37f, -0.80f,0.0f, 5);
+					add_motor_raw(AP_MOTORS_MOT_6, -1.0f, -0.34f,0.0f, 6);
+					add_motor_raw(AP_MOTORS_MOT_7,  0.0f,  0.0f,0.0f, 7);
+					add_motor_raw(AP_MOTORS_MOT_8,  0.0f,  0.0f,0.0f, 8);
                     success = true;
                     break;
-                case MOTOR_FRAME_TYPE_X:
-                    add_motor(AP_MOTORS_MOT_1,   22.5f, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  1);
-                    add_motor(AP_MOTORS_MOT_2, -157.5f, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  5);
-                    add_motor(AP_MOTORS_MOT_3,   67.5f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 2);
-                    add_motor(AP_MOTORS_MOT_4,  157.5f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 4);
-                    add_motor(AP_MOTORS_MOT_5,  -22.5f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 8);
-                    add_motor(AP_MOTORS_MOT_6, -112.5f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 6);
-                    add_motor(AP_MOTORS_MOT_7,  -67.5f, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  7);
-                    add_motor(AP_MOTORS_MOT_8,  112.5f, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  3);
+                case MOTOR_FRAME_TYPE_X:          //H3 mix
+                    add_motor_raw(AP_MOTORS_MOT_1, 0.81f,  1.0f,0.0f, 1);
+					add_motor_raw(AP_MOTORS_MOT_2,-0.81f,  1.0f,0.0f, 2);
+					add_motor_raw(AP_MOTORS_MOT_3,  1.0f, -1.0f,0.0f, 3);
+					add_motor_raw(AP_MOTORS_MOT_4,  1.0f, -1.0f,0.0f, 4);
+					add_motor_raw(AP_MOTORS_MOT_5,  0.0f,  0.0f,0.0f, 5);
+					add_motor_raw(AP_MOTORS_MOT_6,  0.0f,  0.0f,0.0f, 6);
+					add_motor_raw(AP_MOTORS_MOT_7,  0.0f,  0.0f,0.0f, 7);
+					add_motor_raw(AP_MOTORS_MOT_8,  0.0f,  0.0f,0.0f, 8);
                     success = true;
                     break;
                 case MOTOR_FRAME_TYPE_V:
